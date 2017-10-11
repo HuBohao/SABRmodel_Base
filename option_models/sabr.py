@@ -9,13 +9,47 @@ import numpy as np
 import scipy.stats as ss
 import scipy.optimize as sopt
 from . import normal
+from . import bsm
 
-def sabr_normvol(strike, forward, sigma, texp, alpha=0, rho=0, beta=0):
+def bsm_vol(strike, forward, texp, sigma, alpha=0, rho=0, beta=1):
+    if(texp<=0.0):
+        return( 0.0 )
+
+    powFwdStrk = (forward*strike)**((1-beta)/2)
+    logFwdStrk = np.log(forward/strike)
+    logFwdStrk2 = logFwdStrk**2
+  
+    pre1 = powFwdStrk*( 1 + (1-beta)**2/24 * logFwdStrk2*(1 + (1-beta)**2/80 * logFwdStrk2) )
+  
+    pre2alp0 = (2-3*rho2)*alpha**2/24
+    pre2alp1 = alpha*rho*beta/4/powFwdStrk
+    pre2alp2 = (1-beta)**2/24/powFwdStrk**2
+  
+    pre2 = 1 + texp*( pre2alp0 + sigma*(pre2alp1 + pre2alp2*sigma) )
+
+    zz = powFwdStrk*logFwdStrk*alpha/np.fmax(sigma, 1e-32)  # need to make sure sig > 0
+    if isinstance(zz, float):
+        zz = np.array([zz])
+    yy = sqrt(1 + zz*(zz-2*rho))
+  
+    xx_zz = np.zeros(zz.size)
+  
+    ind = np.where(abs(zz) < 1e-5)
+    xx_zz[ind] = 1 + (rho/2)*zz[ind] + (1/2*rho2-1/6)*zz[ind]**2 + 1/8*(5*rho2-3)*rho*zz[ind]**3
+    ind = np.where(zz >= 1e-5)
+    xx_zz[ind] = np.log( (yy[[ind]] + (zz[ind]-rho))/(1-rho) ) / zz[ind]
+    ind = np.where(zz <= -1e-5)
+    xx_zz[ind] = np.log( (1+rho)/(yy[ind] - (zz[ind]-rho)) ) / zz[ind]
+
+    bsmvol = sigma*pre2/(pre1*xx_zz) # bsm vol
+    return(bsmvol[0] if bsmvol.size==1 else bsmvol)
+
+def norm_vol(strike, forward, texp, sigma, alpha=0, rho=0):
     # forward, spot, sigma may be either scalar or np.array. 
     # texp, alpha, rho, beta should be scholar values
 
     if(texp<=0.0):
-        return( sigma )
+        return( 0.0 )
     
     zeta = (forward - strike)*alpha/np.fmax(sigma, 1e-32)
     # explicitly make np.array even if args are all scalar or list
@@ -39,36 +73,38 @@ def sabr_normvol(strike, forward, sigma, texp, alpha=0, rho=0, beta=0):
  
     return(nvol[0] if nvol.size==1 else nvol)
 
-def sabr_price(strike, forward, sigma, texp, cp_sign=1, alpha=0, rho=0, beta=0):
-    nvol = sabr_normvol(strike, forward, sigma, texp, alpha=alpha, rho=rho, beta=beta)
-    price = normal.normal_price(strike, forward, nvol, texp, cp_sign=cp_sign)
-    return price
 
-
-class SabrModel_Hagan:
-    alpha, beta, rho = 0, 0.0, 0.0
-    sigma, intr, divr = None, None, None
+class ModelNormalHagan:
+    alpha, beta, rho = 0.0, 0.0, 0.0
+    texp, sigma, intr, divr = None, None, None, None
+    normal_model = None
     
-    def __init__(self, sigma, alpha=0, rho=0.0, beta=0.0, intr=0, divr=0):
+    def __init__(self, texp, sigma, alpha=0, rho=0.0, intr=0, divr=0):
+        self.beta = 0.0 # not used but put it here
+        self.texp = texp
         self.sigma = sigma
         self.alpha = alpha
-        self.beta = beta
         self.rho = rho
         self.intr = intr
         self.divr = divr
-
-    def normvol(self, strike, spot, texp):
-        div_fac = np.exp(-texp*self.divr)
-        disc_fac = np.exp(-texp*self.intr)
-        forward = spot / disc_fac * div_fac
-        return sabr_normvol(strike, forward, self.sigma, texp, alpha=self.alpha, rho=self.rho, beta=self.beta)
+        self.normal_model = normal.Model(texp, sigma, intr=intr, divr=divr)
         
-    def price(self, strike, spot, texp, cp_sign=1):
-        n_vol = self.normvol(strike, spot, texp) 
-        return normal.normal_price(strike, spot, n_vol, texp, cp_sign=cp_sign, intr=self.intr, divr=self.divr)
+    def norm_vol(self, strike, spot, texp=None, sigma=None):
+        sigma = self.sigma if(sigma is None) else sigma
+        texp = self.texp if(texp is None) else texp
+        forward = spot * np.exp(texp*(self.intr - self.divr))
+        return norm_vol(strike, forward, texp, sigma, alpha=self.alpha, rho=self.rho)
+        
+    def price(self, strike, spot, texp=None, sigma=None, cp_sign=1):
+        n_vol = self.norm_vol(strike, spot, texp, sigma)
+        return self.normal_model.price(strike, spot, texp, n_vol, cp_sign=cp_sign)
     
-    def impvol(self, price, strike, spot, texp, cp_sign=1):
+    def impvol(self, price, strike, spot, texp=None, cp_sign=1):
+        texp = self.texp if(texp is None) else texp
+        vol = self.normal_model.impvol(price, strike, spot, texp, cp_sign=cp_sign)
+        forward = spot * np.exp(texp*(self.intr - self.divr))
+        
         iv_func = lambda _sigma: \
-            sabr_price(strike, forward, self.sigma, texp, cp_sign, alpha=self.alpha, rho=self.rho, beta=self.beta) - price
-        sigma = sopt.brentq(iv_func, 0, 10)
+            norm_vol(strike, forward, texp, _sigma, alpha=self.alpha, rho=self.rho) - vol
+        sigma = sopt.brentq(iv_func, 0, 50)
         return sigma
