@@ -11,6 +11,9 @@ import scipy.optimize as sopt
 from . import normal
 from . import bsm
 
+'''
+Asymptotic approximation for 0<beta<=1 by Hagan
+'''
 def bsm_vol(strike, forward, texp, sigma, alpha=0, rho=0, beta=1):
     if(texp<=0.0):
         return( 0.0 )
@@ -45,6 +48,9 @@ def bsm_vol(strike, forward, texp, sigma, alpha=0, rho=0, beta=1):
     bsmvol = sigma*pre2/(pre1*xx_zz) # bsm vol
     return(bsmvol[0] if bsmvol.size==1 else bsmvol)
 
+'''
+Asymptotic approximation for beta=0 by Hagan
+'''
 def norm_vol(strike, forward, texp, sigma, alpha=0, rho=0):
     # forward, spot, sigma may be either scalar or np.array. 
     # texp, alpha, rho, beta should be scholar values
@@ -74,8 +80,11 @@ def norm_vol(strike, forward, texp, sigma, alpha=0, rho=0):
  
     return(nvol[0] if nvol.size==1 else nvol)
 
+'''
+Hagan model class for 0<beta<=1
+'''
 class ModelHagan:
-    alpha, beta, rho = 0.0, 1, 0.0
+    alpha, beta, rho = 0.0, 1.0, 0.0
     texp, sigma, intr, divr = None, None, None, None
     bsm_model = None
     
@@ -110,13 +119,21 @@ class ModelHagan:
         if(setval):
             self.sigma = sigma
         return sigma
+    
+    def calibrate3(self, price3, strike3, spot, texp=None, cp_sign=1, setval=False):
+        
+        
+        
 
+'''
+Hagan model class for 0<beta<=1
+'''
 class ModelNormalHagan:
     alpha, beta, rho = 0.0, 0.0, 0.0
     texp, sigma, intr, divr = None, None, None, None
     normal_model = None
     
-    def __init__(self, texp, sigma, alpha=0, rho=0.0, intr=0, divr=0):
+    def __init__(self, texp, sigma, alpha=0, rho=0.0, beta=0.0, intr=0, divr=0):
         self.beta = 0.0 # not used but put it here
         self.texp = texp
         self.sigma = sigma
@@ -147,3 +164,76 @@ class ModelNormalHagan:
         if(setval):
             self.sigma = sigma
         return sigma
+
+'''
+MC model class for Beta=1
+'''
+class ModelBsmMC:
+    beta = 1.0   # fixed (not used)
+    alpha, rho = 0.0, 0.0
+    texp, sigma, intr, divr = None, None, None, None
+    bsm_model = None
+    '''
+    You may define more members for MC: time step, etc
+    '''
+    
+    def __init__(self, texp, sigma, alpha=0, rho=0.0, beta=1.0, intr=0, divr=0):
+        self.texp = texp
+        self.sigma = sigma
+        self.alpha = alpha
+        self.rho = rho
+        self.intr = intr
+        self.divr = divr
+        self.bsm_model = bsm.Model(texp, sigma, intr=intr, divr=divr)
+        
+    def bsm_vol(self, strike, spot, texp=None, sigma=None):
+        ''''
+        From the price from self.price() compute the implied vol
+        this is the opposite of bsm_vol in ModelHagan class
+        use bsm_model
+        '''
+        return 0
+    
+    def price(self, strike, spot, texp=None, sigma=None, cp_sign=1):
+        '''
+        Your MC routine goes here
+        Generate paths first. Then get prices (vector) for all strikes
+        You may fix the random number seed
+        '''
+        np.random.seed(12345)
+        return 0
+
+'''
+MC model class for Beta=0
+'''
+class ModelNormalMC:
+    beta = 0.0   # fixed (not used)
+    alpha, rho = 0.0, 0.0
+    texp, sigma, intr, divr = None, None, None, None
+    normal_model = None
+    
+    def __init__(self, texp, sigma, alpha=0, rho=0.0, beta=0.0, intr=0, divr=0):
+        self.texp = texp
+        self.sigma = sigma
+        self.alpha = alpha
+        self.rho = rho
+        self.intr = intr
+        self.divr = divr
+        self.normal_model = normal.Model(texp, sigma, intr=intr, divr=divr)
+        
+    def norm_vol(self, strike, spot, texp=None, sigma=None):
+        ''''
+        From the price from self.price() compute the implied vol
+        this is the opposite of normal_vol in ModelNormalHagan class
+        use normal_model 
+        '''
+        return 0
+        
+    def price(self, strike, spot, texp=None, sigma=None, cp_sign=1):
+        '''
+        Your MC routine goes here
+        Generate paths first. Then get prices (vector) for all strikes
+        You may fix the random number seed
+        '''
+        np.random.seed(12345)
+        return 0
