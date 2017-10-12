@@ -256,7 +256,7 @@ class ModelNormalMC:
 '''
 Conditional MC model class for Beta=1
 '''
-class ModelBsmContMC:
+class ModelBsmCondMC:
     beta = 1.0   # fixed (not used)
     alpha, rho = 0.0, 0.0
     texp, sigma, intr, divr = None, None, None, None
@@ -296,7 +296,7 @@ class ModelBsmContMC:
 '''
 Conditional MC model class for Beta=0
 '''
-class ModelNormalContMC:
+class ModelNormalCondMC:
     beta = 0.0   # fixed (not used)
     alpha, rho = 0.0, 0.0
     texp, sigma, intr, divr = None, None, None, None
