@@ -131,7 +131,7 @@ class ModelHagan:
         return 0, 0, 0 # sigma, alpha, rho
 
 '''
-Hagan model class for 0<beta<=1
+Hagan model class for beta=0
 '''
 class ModelNormalHagan:
     alpha, beta, rho = 0.0, 0.0, 0.0
