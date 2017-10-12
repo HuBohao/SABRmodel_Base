@@ -121,14 +121,14 @@ class ModelHagan:
         return sigma
     
     def calibrate3(self, price_or_vol3, strike3, spot, texp=None, cp_sign=1, setval=False, is_vol=True):
-    '''  
-    Given option prices or bsm vols at 3 strikes, compute the sigma, alpha, rho to fit the data
-    If prices are given (is_vol=False) convert the prices to vol first.
-    Then use multi-dimensional root solving 
-    you may use sopt.root
-    # https://docs.scipy.org/doc/scipy-0.18.1/reference/generated/scipy.optimize.root.html#scipy.optimize.root
-    '''
-    return 0, 0, 0 # sigma, alpha, rho
+        '''  
+        Given option prices or bsm vols at 3 strikes, compute the sigma, alpha, rho to fit the data
+        If prices are given (is_vol=False) convert the prices to vol first.
+        Then use multi-dimensional root solving 
+        you may use sopt.root
+        # https://docs.scipy.org/doc/scipy-0.18.1/reference/generated/scipy.optimize.root.html#scipy.optimize.root
+        '''
+        return 0, 0, 0 # sigma, alpha, rho
 
 '''
 Hagan model class for 0<beta<=1
