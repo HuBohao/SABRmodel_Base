@@ -212,7 +212,7 @@ class ModelBsmMC:
     def price(self, strike, spot, texp=None, sigma=None, cp_sign=1):
         '''
         Your MC routine goes here
-        Generate paths first. Then get prices (vector) for all strikes
+        Generate paths for vol and price first. Then get prices (vector) for all strikes
         You may fix the random number seed
         '''
         np.random.seed(12345)
@@ -247,7 +247,83 @@ class ModelNormalMC:
     def price(self, strike, spot, texp=None, sigma=None, cp_sign=1):
         '''
         Your MC routine goes here
-        Generate paths first. Then get prices (vector) for all strikes
+        Generate paths for vol and price first. Then get prices (vector) for all strikes
+        You may fix the random number seed
+        '''
+        np.random.seed(12345)
+        return 0
+
+'''
+Conditional MC model class for Beta=1
+'''
+class ModelBsmContMC:
+    beta = 1.0   # fixed (not used)
+    alpha, rho = 0.0, 0.0
+    texp, sigma, intr, divr = None, None, None, None
+    bsm_model = None
+    '''
+    You may define more members for MC: time step, etc
+    '''
+    
+    def __init__(self, texp, sigma, alpha=0, rho=0.0, beta=1.0, intr=0, divr=0):
+        self.texp = texp
+        self.sigma = sigma
+        self.alpha = alpha
+        self.rho = rho
+        self.intr = intr
+        self.divr = divr
+        self.bsm_model = bsm.Model(texp, sigma, intr=intr, divr=divr)
+        
+    def bsm_vol(self, strike, spot, texp=None, sigma=None):
+        ''''
+        From the price from self.price() compute the implied vol
+        this is the opposite of bsm_vol in ModelHagan class
+        use bsm_model
+        should be same as bsm_vol method in ModelBsmMC (just copy & paste)
+        '''
+        return 0
+    
+    def price(self, strike, spot, texp=None, sigma=None, cp_sign=1):
+        '''
+        Your MC routine goes here
+        Generate paths for vol only. Then compute integrated variance and BSM price.
+        Then get prices (vector) for all strikes
+        You may fix the random number seed
+        '''
+        np.random.seed(12345)
+        return 0
+
+'''
+Conditional MC model class for Beta=0
+'''
+class ModelNormalContMC:
+    beta = 0.0   # fixed (not used)
+    alpha, rho = 0.0, 0.0
+    texp, sigma, intr, divr = None, None, None, None
+    normal_model = None
+    
+    def __init__(self, texp, sigma, alpha=0, rho=0.0, beta=0.0, intr=0, divr=0):
+        self.texp = texp
+        self.sigma = sigma
+        self.alpha = alpha
+        self.rho = rho
+        self.intr = intr
+        self.divr = divr
+        self.normal_model = normal.Model(texp, sigma, intr=intr, divr=divr)
+        
+    def norm_vol(self, strike, spot, texp=None, sigma=None):
+        ''''
+        From the price from self.price() compute the implied vol
+        this is the opposite of normal_vol in ModelNormalHagan class
+        use normal_model
+        should be same as norm_vol method in ModelNormalMC (just copy & paste)
+        '''
+        return 0
+        
+    def price(self, strike, spot, texp=None, sigma=None, cp_sign=1):
+        '''
+        Your MC routine goes here
+        Generate paths for vol only. Then compute integrated variance and normal price.
         You may fix the random number seed
         '''
         np.random.seed(12345)
